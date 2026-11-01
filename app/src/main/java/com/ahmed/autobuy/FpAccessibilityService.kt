@@ -1,36 +1,285 @@
+
 package com.ahmed.autobuy
 
-import android.accessibilityservice.AccessibilityService
-import android.view.accessibility.AccessibilityEvent
-import android.content.SharedPreferences
+import android.app.Activity
+import android.app.AlertDialog
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.os.Bundle
+import android.view.Gravity
+import android.view.View
+import android.widget.*
+
+import org.json.JSONArray
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class FpAccessibilityService : AccessibilityService() {
+class MainActivity : Activity() {
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        val pkg = event?.packageName?.toString() ?: return
+    private lateinit var typeGroup: RadioGroup
+    private lateinit var codeInput: EditText
+    private lateinit var searchInput: EditText
+    private lateinit var countText: TextView
+    private lateinit var codesLayout: LinearLayout
 
-        if (pkg == "com.sslwireless.fastpaybusiness") {
-            val time = SimpleDateFormat(
-                "yyyy-MM-dd HH:mm:ss",
-                Locale.getDefault()
-            ).format(Date())
+    private val prefs by lazy {
+        getSharedPreferences("AhmedCodesV2", Context.MODE_PRIVATE)
+    }
 
-            val prefs = getSharedPreferences(
-                "AhmedAutoBuyLog",
-                MODE_PRIVATE
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val root = LinearLayout(this)
+        root.orientation = LinearLayout.VERTICAL
+        root.setPadding(20, 20, 20, 20)
+
+        val title = TextView(this)
+        title.text = "Ahmed AutoBuy"
+        title.textSize = 26f
+        title.gravity = Gravity.CENTER
+
+        val subtitle = TextView(this)
+        subtitle.text = "إدارة أكواد البطاقات - فئة 10$"
+        subtitle.textSize = 16f
+        subtitle.gravity = Gravity.CENTER
+
+        typeGroup = RadioGroup(this)
+        typeGroup.orientation = RadioGroup.HORIZONTAL
+
+        val psRadio = RadioButton(this)
+        psRadio.id = View.generateViewId()
+        psRadio.text = "PlayStation"
+        psRadio.isChecked = true
+
+        val robloxRadio = RadioButton(this)
+        robloxRadio.id = View.generateViewId()
+        robloxRadio.text = "Roblox"
+
+        typeGroup.addView(psRadio)
+        typeGroup.addView(robloxRadio)
+
+        codeInput = EditText(this)
+        codeInput.hint = "أدخل كود 10$"
+
+        val saveButton = Button(this)
+        saveButton.text = "حفظ الكود"
+        saveButton.setOnClickListener {
+            saveCode()
+        }
+
+        countText = TextView(this)
+        countText.textSize = 16f
+        countText.setPadding(0, 12, 0, 12)
+
+        searchInput = EditText(this)
+        searchInput.hint = "ابحث عن كود..."
+        searchInput.addTextChangedListener(
+            object : android.text.TextWatcher {
+                override fun beforeTextChanged(
+                    s: CharSequence?, start: Int,
+                    count: Int, after: Int
+                ) {}
+
+                override fun onTextChanged(
+                    s: CharSequence?, start: Int,
+                    before: Int, count: Int
+                ) {
+                    refreshCodes()
+                }
+
+                override fun afterTextChanged(
+                    s: android.text.Editable?
+                ) {}
+            }
+        )
+
+        codesLayout = LinearLayout(this)
+        codesLayout.orientation = LinearLayout.VERTICAL
+
+        val scroll = ScrollView(this)
+        scroll.addView(codesLayout)
+
+        root.addView(title)
+        root.addView(subtitle)
+        root.addView(typeGroup)
+        root.addView(codeInput)
+        root.addView(saveButton)
+        root.addView(countText)
+        root.addView(searchInput)
+
+        root.addView(
+            scroll,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
             )
+        )
 
-            val oldLog = prefs.getString("events", "") ?: ""
-            val newLog = "تم اكتشاف FP Card Selling - $time\n$oldLog"
+        setContentView(root)
+        refreshCodes()
+    }
 
-            prefs.edit()
-                .putString("events", newLog.take(10000))
-                .apply()
+    private fun selectedType(): String {
+        val selected = typeGroup.checkedRadioButtonId
+        val radio = findViewById<RadioButton>(selected)
+        return radio.text.toString()
+    }
+
+    private fun readCodes(): JSONArray {
+        return try {
+            JSONArray(prefs.getString("codes", "[]"))
+        } catch (e: Exception) {
+            JSONArray()
         }
     }
 
-    override fun onInterrupt() = Unit
+    private fun saveCode() {
+        val code = codeInput.text.toString().trim()
+
+        if (code.isEmpty()) {
+            Toast.makeText(
+                this, "أدخل الكود أولاً",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        val codes = readCodes()
+
+        val item = JSONObject()
+        item.put("code", code)
+        item.put("type", selectedType())
+        item.put("price", "10$")
+        item.put(
+            "date",
+            SimpleDateFormat(
+                "yyyy/MM/dd HH:mm:ss",
+                Locale.getDefault()
+            ).format(Date())
+        )
+
+        codes.put(item)
+
+        prefs.edit()
+            .putString("codes", codes.toString())
+            .apply()
+
+        codeInput.text.clear()
+        searchInput.text.clear()
+        refreshCodes()
+
+        Toast.makeText(
+            this, "تم حفظ الكود بنجاح",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    private fun refreshCodes() {
+        codesLayout.removeAllViews()
+
+        val codes = readCodes()
+        var psCount = 0
+        var robloxCount = 0
+
+        val search = searchInput.text.toString().trim()
+
+        for (i in 0 until codes.length()) {
+            val item = codes.optJSONObject(i) ?: continue
+            if (item.optString("type") == "PlayStation") {
+                psCount++
+            } else if (item.optString("type") == "Roblox") {
+                robloxCount++
+            }
+        }
+
+        countText.text =
+            "PlayStation: $psCount    |    Roblox: $robloxCount\n" +
+            "المجموع: ${codes.length()}"
+
+        for (i in codes.length() - 1 downTo 0) {
+            val item = codes.optJSONObject(i) ?: continue
+
+            val code = item.optString("code")
+            val type = item.optString("type")
+            val date = item.optString("date")
+
+            if (search.isNotEmpty() &&
+                !code.contains(search, ignoreCase = true) &&
+                !type.contains(search, ignoreCase = true)
+            ) {
+                continue
+            }
+
+            val card = LinearLayout(this)
+            card.orientation = LinearLayout.VERTICAL
+            card.setPadding(12, 12, 12, 12)
+
+            val info = TextView(this)
+            info.text = "$type - 10$\nالكود: $code\nالتاريخ: $date"
+            info.textSize = 15f
+
+            val buttons = LinearLayout(this)
+            buttons.orientation = LinearLayout.HORIZONTAL
+
+            val copyButton = Button(this)
+            copyButton.text = "نسخ"
+            copyButton.setOnClickListener {
+                val clipboard =
+                    getSystemService(
+                        Context.CLIPBOARD_SERVICE
+                    ) as ClipboardManager
+
+                clipboard.setPrimaryClip(
+                    ClipData.newPlainText("Code", code)
+                )
+
+                Toast.makeText(
+                    this, "تم نسخ الكود",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
+            val deleteButton = Button(this)
+            deleteButton.text = "حذف"
+            deleteButton.setOnClickListener {
+                AlertDialog.Builder(this)
+                    .setMessage("هل تريد حذف هذا الكود؟")
+                    .setPositiveButton("حذف") { _, _ ->
+                        val updated = readCodes()
+                        updated.remove(i)
+
+                        prefs.edit()
+                            .putString("codes", updated.toString())
+                            .apply()
+
+                        refreshCodes()
+                    }
+                    .setNegativeButton("إلغاء", null)
+                    .show()
+            }
+
+            buttons.addView(copyButton)
+            buttons.addView(deleteButton)
+
+            card.addView(info)
+            card.addView(buttons)
+
+            codesLayout.addView(card)
+
+            val divider = View(this)
+            divider.setBackgroundColor(0xFFCCCCCC.toInt())
+
+            codesLayout.addView(
+                divider,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    1
+                )
+            )
+        }
+    }
 }
