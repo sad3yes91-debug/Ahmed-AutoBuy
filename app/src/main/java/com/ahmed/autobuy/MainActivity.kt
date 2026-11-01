@@ -1,36 +1,51 @@
-package com.ahmed.autobuy
+setOnClickListener {
+                    val clipboard =
+                        getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(
+                        ClipData.newPlainText("Code", code)
+                    )
+                    Toast.makeText(
+                        this@MainActivity,
+                        "تم نسخ الكود",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
 
-import android.app.Activity
-import android.os.Bundle
-import android.view.Gravity
-import android.widget.LinearLayout
-import android.widget.TextView
+            val deleteButton = Button(this).apply {
+                text = "حذف"
+                setOnClickListener {
+                    AlertDialog.Builder(this@MainActivity)
+                        .setMessage("هل تريد حذف هذا الكود؟")
+                        .setPositiveButton("حذف") { _, _ ->
+                            val updated = readCodes()
+                            updated.remove(i)
+                            prefs.edit()
+                                .putString("codes", updated.toString())
+                                .apply()
+                            refreshCodes()
+                        }
+                        .setNegativeButton("إلغاء", null)
+                        .show()
+                }
+            }
 
-class MainActivity : Activity() {
+            buttons.addView(copyButton)
+            buttons.addView(deleteButton)
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+            card.addView(codeText)
+            card.addView(dateText)
+            card.addView(buttons)
 
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(32, 32, 32, 32)
+            codesLayout.addView(card)
+
+            val line = View(this).apply {
+                setBackgroundColor(0xFFCCCCCC.toInt())
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, 1
+                )
+            }
+            codesLayout.addView(line)
         }
-
-        val title = TextView(this).apply {
-            text = "Ahmed AutoBuy"
-            textSize = 26f
-        }
-
-        val status = TextView(this).apply {
-            text = "النسخة التجريبية 0.1\n\nالمرحلة الحالية: فحص تطبيق FP Card Selling.\n\nلن ينفذ التطبيق عمليات شراء تلقائية في هذه النسخة."
-            textSize = 18f
-            setPadding(0, 24, 0, 24)
-        }
-
-        layout.addView(title)
-        layout.addView(status)
-
-        setContentView(layout)
     }
 }
