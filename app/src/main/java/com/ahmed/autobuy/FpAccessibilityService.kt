@@ -1,4 +1,3 @@
-
 package com.ahmed.autobuy
 
 import android.app.Activity
