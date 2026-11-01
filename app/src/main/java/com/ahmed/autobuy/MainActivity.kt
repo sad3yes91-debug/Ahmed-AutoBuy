@@ -1,71 +1,55 @@
-package com.ahmed.autobuy
+val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(12, 16, 12, 16)
+            }
 
-import android.app.Activity
-import android.os.Bundle
-import android.view.Gravity
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.Button
-import android.widget.ScrollView
+            val codeView = TextView(this).apply {
+                text = code
+                textSize = 18f
+            }
 
-class MainActivity : Activity() {
+            val dateView = TextView(this).apply {
+                text = date
+                textSize = 13f
+            }
 
-    private lateinit var logView: TextView
+            val copy = Button(this).apply {
+                text = "نسخ الكود"
+                setOnClickListener {
+                    val clipboard = getSystemService(CLIPBOARD_SERVICE)
+                        as ClipboardManager
+                    clipboard.setPrimaryClip(
+                        ClipData.newPlainText("Code", code)
+                    )
+                    Toast.makeText(
+                        this@MainActivity,
+                        "تم نسخ الكود",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+            val delete = Button(this).apply {
+                text = "حذف"
+                setOnClickListener {
+                    deleteCode(i)
+                }
+            }
 
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(30, 30, 30, 30)
+            card.addView(codeView)
+            card.addView(dateView)
+            card.addView(copy)
+            card.addView(delete)
+            logView.addView(card)
         }
-
-        val title = TextView(this).apply {
-            text = "Ahmed AutoBuy"
-            textSize = 26f
-        }
-
-        val status = TextView(this).apply {
-            text = "سجل مراقبة FP Card Selling"
-            textSize = 18f
-            setPadding(0, 25, 0, 20)
-        }
-
-        val refresh = Button(this).apply {
-            text = "تحديث السجل"
-            setOnClickListener { loadLog() }
-        }
-
-        logView = TextView(this).apply {
-            textSize = 16f
-            text = "جاري تحميل السجل..."
-        }
-
-        val scroll = ScrollView(this).apply {
-            addView(logView)
-        }
-
-        layout.addView(title)
-        layout.addView(status)
-        layout.addView(refresh)
-        layout.addView(scroll)
-
-        setContentView(layout)
-        loadLog()
     }
 
-    private fun loadLog() {
-        val prefs = getSharedPreferences(
-            "AhmedAutoBuyLog",
-            MODE_PRIVATE
-        )
-
-        val events = prefs.getString("events", "") ?: ""
-
-        logView.text = if (events.isBlank()) {
-            "لا توجد أحداث مسجلة حتى الآن.\n\nافتح FP Card Selling ثم ارجع واضغط تحديث السجل."
-        } else {
-            events
+    private fun deleteCode(index: Int) {
+        val codes = readCodes()
+        if (index >= 0 && index < codes.length()) {
+            codes.remove(index)
+            prefs.edit().putString("codes", codes.toString()).apply()
+            refreshCodes()
         }
     }
 }
