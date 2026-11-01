@@ -1,57 +1,36 @@
-val codeView = TextView(this)
-            codeView.text = code
-            codeView.textSize = 18f
+package com.ahmed.autobuy
 
-            val dateView = TextView(this)
-            dateView.text = date
-            dateView.textSize = 13f
+import android.app.Activity
+import android.os.Bundle
+import android.view.Gravity
+import android.widget.LinearLayout
+import android.widget.TextView
 
-            val copyButton = Button(this)
-            copyButton.text = "نسخ الكود"
+class MainActivity : Activity() {
 
-            copyButton.setOnClickListener {
-                val clipboard = getSystemService(
-                    Context.CLIPBOARD_SERVICE
-                ) as ClipboardManager
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-                clipboard.setPrimaryClip(
-                    ClipData.newPlainText("Code", code)
-                )
-
-                Toast.makeText(
-                    this@MainActivity,
-                    "تم نسخ الكود",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-
-            val deleteButton = Button(this)
-            deleteButton.text = "حذف الكود"
-
-            deleteButton.setOnClickListener {
-                deleteCode(i)
-            }
-
-            card.addView(codeView)
-            card.addView(dateView)
-            card.addView(copyButton)
-            card.addView(deleteButton)
-
-            logView.addView(card)
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(32, 32, 32, 32)
         }
-    }
 
-    private fun deleteCode(index: Int) {
-        val codes = readCodes()
-
-        if (index >= 0 && index < codes.length()) {
-            codes.remove(index)
-
-            prefs.edit()
-                .putString("codes", codes.toString())
-                .apply()
-
-            refreshCodes()
+        val title = TextView(this).apply {
+            text = "Ahmed AutoBuy"
+            textSize = 26f
         }
+
+        val status = TextView(this).apply {
+            text = "النسخة التجريبية 0.1\n\nالمرحلة الحالية: فحص تطبيق FP Card Selling.\n\nلن ينفذ التطبيق عمليات شراء تلقائية في هذه النسخة."
+            textSize = 18f
+            setPadding(0, 24, 0, 24)
+        }
+
+        layout.addView(title)
+        layout.addView(status)
+
+        setContentView(layout)
     }
 }
